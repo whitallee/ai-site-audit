@@ -24,17 +24,17 @@ type Section struct {
 }
 
 type AuditResult struct {
-	SiteURL     string  `json:"site_url"`
-	Score       int     `json:"score"`
-	Summary     string  `json:"summary"`
-	SEO         Section `json:"seo"`
-	UX          Section `json:"ux"`
-	Performance Section `json:"performance"`
-	Conversion  Section `json:"conversion"`
+	SiteURL     string   `json:"site_url"`
+	Score       int      `json:"score"`
+	Summary     string   `json:"summary"`
+	SEO         Section  `json:"seo"`
+	UX          Section  `json:"ux"`
+	Performance Section  `json:"performance"`
+	Conversion  Section  `json:"conversion"`
 	QuickWins   []string `json:"quick_wins"`
 }
 
-var client *anthropic.Client
+var client anthropic.Client
 
 func init() {
 	client = anthropic.NewClient(option.WithAPIKey(os.Getenv("ANTHROPIC_API_KEY")))
@@ -50,7 +50,7 @@ H1 Tags: %v
 H2 Tags: %v
 Has SSL: %v
 Image Count: %d
-Internal/External Links: %d total
+Total Links: %d
 Body Text (excerpt): %s
 
 Return exactly this structure:
@@ -79,28 +79,23 @@ Return exactly this structure:
   },
   "quick_wins": ["<high-impact, low-effort action>"]
 }`,
-		scraped.URL,
-		scraped.Title,
-		scraped.Description,
-		scraped.H1s,
-		scraped.H2s,
-		scraped.HasSSL,
-		scraped.ImageCount,
-		len(scraped.Links),
-		scraped.BodyText,
+		scraped.URL, scraped.Title, scraped.Description,
+		scraped.H1s, scraped.H2s, scraped.HasSSL,
+		scraped.ImageCount, len(scraped.Links), scraped.BodyText,
 	)
 
 	msg, err := client.Messages.New(ctx, anthropic.MessageNewParams{
-		Model:     anthropic.F(anthropic.ModelClaude3_5SonnetLatest),
-		MaxTokens: anthropic.F(int64(2048)),
-		System: anthropic.F([]anthropic.TextBlockParam{
-			{Text: anthropic.F("You are an expert web consultant specializing in SEO, UX, performance, and conversion rate optimization. Respond only with valid JSON — no markdown, no code blocks, no prose.")},
-		}),
-		Messages: anthropic.F([]anthropic.MessageParam{
-			anthropic.UserMessageParam(anthropic.F([]anthropic.ContentBlockParamUnion{
-				anthropic.TextBlockParam{Text: anthropic.F(prompt)},
-			})),
-		}),
+		Model:     anthropic.ModelClaudeSonnet4_6,
+		MaxTokens: 2048,
+		System: []anthropic.TextBlockParam{{
+			Text: "You are an expert web consultant specializing in SEO, UX, performance, and conversion rate optimization. Respond only with valid JSON — no markdown, no code blocks, no prose.",
+		}},
+		Messages: []anthropic.MessageParam{{
+			Role: anthropic.MessageParamRoleUser,
+			Content: []anthropic.ContentBlockParamUnion{{
+				OfText: &anthropic.TextBlockParam{Text: prompt},
+			}},
+		}},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("anthropic API: %w", err)
@@ -125,23 +120,22 @@ var pdfTemplate = template.Must(template.New("pdf").Parse(`<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1a1a2e; padding: 40px; font-size: 14px; line-height: 1.6; }
   header { border-bottom: 3px solid #2563eb; padding-bottom: 16px; margin-bottom: 24px; }
   header h1 { font-size: 22px; color: #2563eb; }
   header p { color: #555; font-size: 13px; margin-top: 4px; }
   .overall { display: flex; align-items: center; gap: 24px; background: #f0f4ff; border-radius: 8px; padding: 20px; margin-bottom: 24px; }
-  .score-circle { font-size: 48px; font-weight: 700; color: #2563eb; line-height: 1; }
-  .summary { color: #333; }
+  .score-circle { font-size: 52px; font-weight: 700; color: #2563eb; line-height: 1; min-width: 80px; text-align: center; }
   .section { border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
-  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .section-title { font-size: 16px; font-weight: 600; }
   .section-score { font-size: 20px; font-weight: 700; color: #2563eb; }
-  .label { font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #666; margin: 10px 0 6px; }
+  .label { font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin: 10px 0 5px; }
   ul { padding-left: 18px; }
   li { margin-bottom: 4px; }
   .quick-wins { background: #f0fdf4; border-left: 4px solid #16a34a; padding: 16px; border-radius: 4px; margin-top: 8px; }
-  .quick-wins h2 { color: #16a34a; font-size: 16px; margin-bottom: 8px; }
+  .quick-wins h2 { color: #16a34a; font-size: 15px; margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -152,9 +146,9 @@ var pdfTemplate = template.Must(template.New("pdf").Parse(`<!DOCTYPE html>
 
   <div class="overall">
     <div class="score-circle">{{.Score}}</div>
-    <div class="summary">
+    <div>
       <strong>Overall Score</strong>
-      <p>{{.Summary}}</p>
+      <p style="margin-top:6px; color:#334155;">{{.Summary}}</p>
     </div>
   </div>
 
@@ -164,14 +158,8 @@ var pdfTemplate = template.Must(template.New("pdf").Parse(`<!DOCTYPE html>
       <span class="section-title">{{.Name}}</span>
       <span class="section-score">{{.Score}}/100</span>
     </div>
-    {{if .Issues}}
-    <div class="label">Issues</div>
-    <ul>{{range .Issues}}<li>{{.}}</li>{{end}}</ul>
-    {{end}}
-    {{if .Recommendations}}
-    <div class="label">Recommendations</div>
-    <ul>{{range .Recommendations}}<li>{{.}}</li>{{end}}</ul>
-    {{end}}
+    {{if .Issues}}<div class="label">Issues</div><ul>{{range .Issues}}<li>{{.}}</li>{{end}}</ul>{{end}}
+    {{if .Recommendations}}<div class="label">Recommendations</div><ul>{{range .Recommendations}}<li>{{.}}</li>{{end}}</ul>{{end}}
   </div>
   {{end}}
 
@@ -207,7 +195,6 @@ func RenderPDF(ctx context.Context, result *AuditResult) ([]byte, error) {
 	}); err != nil {
 		return nil, fmt.Errorf("template: %w", err)
 	}
-	htmlContent := buf.String()
 
 	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(),
 		append(chromedp.DefaultExecAllocatorOptions[:],
@@ -221,7 +208,9 @@ func RenderPDF(ctx context.Context, result *AuditResult) ([]byte, error) {
 	chromCtx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
 
+	htmlContent := buf.String()
 	var pdfBuf []byte
+
 	if err := chromedp.Run(chromCtx,
 		chromedp.Navigate("about:blank"),
 		chromedp.ActionFunc(func(ctx context.Context) error {

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Site Assessment</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>AI Site Assessment</h1>
+      <p class="subtitle">Paste a URL and get an instant AI-powered audit</p>
+    </header>
+
+    <div class="card" id="form-card">
+      <form id="audit-form">
+        <div class="input-row">
+          <input
+            type="text"
+            id="url-input"
+            placeholder="https://example.com"
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <button type="submit" id="submit-btn">Analyze</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="loading" class="hidden">
+      <div class="spinner"></div>
+      <p>Scraping site and running AI analysis&hellip;<br><small>Usually takes 15–30 seconds</small></p>
+    </div>
+
+    <div id="error-box" class="hidden error-box"></div>
+
+    <div id="results" class="hidden">
+      <div class="results-header">
+        <div>
+          <div class="overall-score" id="overall-score"></div>
+          <div class="overall-label">Overall Score</div>
+        </div>
+        <div class="summary-text" id="summary"></div>
+        <a id="pdf-link" class="btn-pdf" href="#" target="_blank">Download PDF</a>
+      </div>
+
+      <div class="sections" id="sections"></div>
+
+      <div class="quick-wins-card">
+        <h2>Quick Wins</h2>
+        <ul id="quick-wins"></ul>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

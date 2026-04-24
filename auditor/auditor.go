@@ -6,11 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"os"
 	"strings"
+	"sync"
 
 	"github.com/anthropics/anthropic-sdk-go"
-	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 
@@ -34,10 +33,17 @@ type AuditResult struct {
 	QuickWins   []string `json:"quick_wins"`
 }
 
-var client anthropic.Client
+var (
+	client     *anthropic.Client
+	clientOnce sync.Once
+)
 
-func init() {
-	client = anthropic.NewClient(option.WithAPIKey(os.Getenv("ANTHROPIC_API_KEY")))
+func getClient() *anthropic.Client {
+	clientOnce.Do(func() {
+		c := anthropic.NewClient() // auto-reads ANTHROPIC_API_KEY from env
+		client = &c
+	})
+	return client
 }
 
 func Audit(ctx context.Context, scraped *scraper.Result) (*AuditResult, error) {
@@ -84,7 +90,7 @@ Return exactly this structure:
 		scraped.ImageCount, len(scraped.Links), scraped.BodyText,
 	)
 
-	msg, err := client.Messages.New(ctx, anthropic.MessageNewParams{
+	msg, err := getClient().Messages.New(ctx, anthropic.MessageNewParams{
 		Model:     anthropic.ModelClaudeSonnet4_6,
 		MaxTokens: 2048,
 		System: []anthropic.TextBlockParam{{

@@ -207,6 +207,7 @@ func RenderPDF(ctx context.Context, result *AuditResult) ([]byte, error) {
 			chromedp.Flag("headless", true),
 			chromedp.Flag("disable-gpu", true),
 			chromedp.Flag("no-sandbox", true),
+			chromedp.Flag("disable-dev-shm-usage", true),
 		)...,
 	)
 	defer cancel()

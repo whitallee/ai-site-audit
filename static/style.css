@@ -73,6 +73,11 @@ header h1 {
 .input-row button:hover { background: #1d4ed8; }
 .input-row button:disabled { background: #94a3b8; cursor: not-allowed; }
 
+@media (max-width: 480px) {
+  .input-row { flex-direction: column; }
+  .input-row button { width: 100%; }
+}
+
 /* Loading */
 #loading {
   text-align: center;
